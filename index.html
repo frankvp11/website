@@ -8,13 +8,17 @@
     <link rel="stylesheet" href="styles.css">
   </head>
   <input type=file id=input accept="image/*"> <br>
+  <h1 id="confidenceTag">Confidence: </h1> 
+
   <button id="draw" onclick="helper()">Draw</button>
-<canvas id=canvas></canvas>
+<canvas id='canvas' height="500" width="500"></canvas>
   
 
   <body>
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
     <script>
         var file_2;
+        var x0, x1, y0, y1;
         var canvas = document.getElementById('canvas');
         var input = document.getElementById('input');
         var context = canvas.getContext('2d');
@@ -24,15 +28,15 @@
             img.onload = function() {
                 canvas.width = this.width
                 canvas.height = this.height
+                context.clearRect(0, 0, canvas.width, canvas.height)
+                changeConfidence()
                 context.drawImage(this, 0, 0)
                 URL.revokeObjectURL(this.src)
             }
-            file_2 = this.files
+            file_2 = this.files[0]
             img.src = URL.createObjectURL(this.files[0])
         }
         function helper(){
-            console.log("Posting to the api")
-            console.log(file_2)
             apiPost(file_2)
             
 
@@ -46,11 +50,39 @@ function apiPost(image){
             'Content-Type': 'multipart/form-data'
         }
     }).then(function(response){
-        console.log(resonse)
+        console.log(response["data"]['instances']['boxes'][0]['x0'])
+        x0 = response['data']['instances']['boxes'][0]["x0"]
+        x1 = response['data']['instances']['boxes'][0]["x1"]
+        y0 = response['data']['instances']['boxes'][0]["y0"]
+        y1 = response['data']['instances']['boxes'][0]["y1"]
+        var confidence = response['data']['instances']['scores'][0]
+        draw(x0, x1, y0, y1)
+        changeConfidence(confidence)
     })
 }
 function draw(x0, x1, y0, y1){
-    
+    console.log("Drawing");
+    var canvas = document.getElementById("canvas")
+    var context = canvas.getContext("2d")
+    context.lineWidth = 5;
+    context.strokeStyle = 'green';
+    context.beginPath()
+    context.moveTo(x0, y0)
+    context.lineTo(x1, y0)
+    context.lineTo(x1, y1)
+    context.lineTo(x0, y1)
+    context.lineTo(x0, y0)
+    context.stroke()
+}
+
+
+function changeConfidence(confidence){
+    if (confidence){
+        document.getElementById("confidenceTag").innerHTML = 'Confidence: ' + confidence*100 + "%"
+    }
+    else {
+        document.getElementById("confidenceTag").innherHTML = 'Confidence: '
+    }
 }
 
 </script>
